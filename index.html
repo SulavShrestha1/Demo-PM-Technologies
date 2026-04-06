@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Risk Analytics — Shopify Canada</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://js.puter.com/v2/"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0d12;
+    --surface: #111620;
+    --card: #161c28;
+    --border: #1e2a3a;
+    --green: #00e5a0;
+    --amber: #f5a623;
+    --red: #ff4d6a;
+    --blue: #4da6ff;
+    --text: #e2eaf4;
+    --muted: #6a7d95;
+    --font-mono: 'Space Mono', monospace;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header-left h1 {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    color: var(--green);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .header-left p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+  .badge {
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.25);
+    color: var(--green);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+  }
+
+  /* PROJECTS ROW */
+  .projects-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .project-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .project-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--border));
+    transition: opacity 0.2s;
+  }
+  .project-card:hover { border-color: rgba(0,229,160,0.3); transform: translateY(-2px); }
+  .project-card.selected { border-color: var(--green); }
+  .project-card.selected::after { background: var(--green); }
+  .project-city {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+  .project-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .project-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .stat-line span:last-child { color: var(--text); font-family: var(--font-mono); }
+  .risk-pill {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .risk-low { background: rgba(0,229,160,0.12); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+  .risk-med { background: rgba(245,166,35,0.12); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+  .risk-high { background: rgba(255,77,106,0.12); color: var(--red); border: 1px solid rgba(255,77,106,0.3); }
+
+  /* MAIN PANEL */
+  .main-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .panel-title {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--green);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* SLIDERS */
+  .slider-group { margin-bottom: 16px; }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .slider-label span:last-child {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+  .slider-label span:last-child.val-green { color: var(--green); }
+  .slider-label span:last-child.val-amber { color: var(--amber); }
+  .slider-label span:last-child.val-red { color: var(--red); }
+
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(0,229,160,0.5);
+    cursor: pointer;
+  }
+
+  /* Context fields */
+  .context-group { margin-bottom: 14px; }
+  .context-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+    display: block;
+  }
+  .context-input, .context-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .context-input:focus, .context-select:focus { border-color: rgba(0,229,160,0.4); }
+  .context-select option { background: var(--card); }
+
+  /* RUN BUTTON */
+  .run-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: #0a0d12;
+    border: none;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+    margin-top: 4px;
+    box-shadow: 0 0 20px rgba(0,229,160,0.2);
+  }
+  .run-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 0 30px rgba(0,229,160,0.35); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* RESULTS */
+  .results-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 200px;
+    position: relative;
+  }
+
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+    gap: 10px;
+  }
+  .placeholder svg { opacity: 0.3; }
+
+  /* Health score */
+  .health-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .score-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid;
+    flex-shrink: 0;
+  }
+  .score-number {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .score-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+  .score-details { flex: 1; }
+  .score-title { font-size: 1rem; font-weight: 600; margin-bottom: 3px; }
+  .score-sub { font-size: 0.75rem; color: var(--muted); }
+
+  /* Risk flags */
+  .flags-title {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .flag-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  .flag-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  /* Recommendations */
+  .recs-title {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 14px 0 10px;
+  }
+  .rec-item {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 7px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .rec-num {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--blue);
+    min-width: 18px;
+    padding-top: 2px;
+  }
+
+  /* Loading state */
+  .loading-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    gap: 14px;
+  }
+  .loader {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 14px 0;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 700px) {
+    .projects-row { grid-template-columns: 1fr; }
+    .main-panel { grid-template-columns: 1fr; }
+  }
+
+/* Add this to your CSS section to handle long AI text better */
+.flag-item, .rec-item {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px;
+    border-radius: 4px;
+    border-left: 2px solid var(--border);
+    margin-bottom: 12px;
+}
+
+.flag-item span, .rec-item span {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text);
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="header-left">
+      <h1>AI Predictive Risk Analytics</h1>
+      <p>Shopify Canada Fulfilment Network — PMO Dashboard</p>
+    </div>
+    <span class="badge">● LIVE DEMO</span>
+  </header>
+
+  <!-- PROJECT CARDS -->
+  <div class="projects-row" id="projectsRow"></div>
+
+  <!-- MAIN PANEL -->
+  <div class="main-panel">
+
+    <!-- LEFT: INPUTS -->
+    <div class="panel">
+      <div class="panel-title">Risk Parameters</div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Budget Utilization</span>
+          <span id="budgetVal" class="val-green">62%</span>
+        </div>
+        <input type="range" id="budget" min="0" max="120" value="62" oninput="updateSlider('budget','budgetVal','%',0,80,100)"/>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Schedule Delay (days)</span>
+          <span id="delayVal" class="val-green">0d</span>
+        </div>
+        <input type="range" id="delay" min="0" max="90" value="0" oninput="updateSlider('delay','delayVal','d',0,14,30)"/>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Resource Availability</span>
+          <span id="resourceVal" class="val-green">85%</span>
+        </div>
+        <input type="range" id="resource" min="0" max="100" value="85" oninput="updateSlider('resource','resourceVal','%',70,50,30,true)"/>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Vendor Risk Score</span>
+          <span id="vendorVal" class="val-green">2/10</span>
+        </div>
+        <input type="range" id="vendor" min="0" max="10" value="2" step="1" oninput="updateSlider('vendor','vendorVal','/10',4,6,8)"/>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>Stakeholder Change Requests</span>
+          <span id="changeVal" class="val-green">1</span>
+        </div>
+        <input type="range" id="change" min="0" max="20" value="1" oninput="updateSlider('change','changeVal','',3,7,12)"/>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="context-group">
+        <label class="context-label">Regulatory Concern (PIPEDA / Provincial)</label>
+        <select class="context-select" id="regulatory">
+          <option value="none">None identified</option>
+          <option value="minor">Minor — data handling review needed</option>
+          <option value="moderate">Moderate — compliance gap flagged</option>
+          <option value="severe">Severe — active regulatory inquiry</option>
+        </select>
+      </div>
+
+      <div class="context-group">
+        <label class="context-label">Additional Context (optional)</label>
+        <input type="text" class="context-input" id="extraContext" placeholder="e.g. labour strike risk, Q4 deadline pressure…"/>
+      </div>
+
+      <button class="run-btn" id="runBtn" onclick="runAnalysis()">▶ Run AI Risk Analysis</button>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results-panel" id="resultsPanel">
+      <div class="panel-title">AI Analysis Output</div>
+      <div class="placeholder" id="placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+        <div>Select a project and configure parameters,<br/>then run the AI analysis to see results.</div>
+      </div>
+      <div id="resultsContent" style="display:none;"></div>
+    </div>
+  </div>
+
+  <footer>AI Predictive Risk Analytics Demo · NovaTech Solutions · APPL57182 PM Innovation Showcase · Powered by Claude AI</footer>
+</div>
+
+<script>
+const projects = [
+  {
+    id: 'toronto',
+    city: 'Toronto, ON',
+    name: 'Fulfilment Centre — East Hub',
+    budget: '$18.4M CAD',
+    completion: '34%',
+    team: '62 resources',
+    baseRisk: 'med',
+    defaults: { budget: 71, delay: 12, resource: 74, vendor: 4, change: 5 }
+  },
+  {
+    id: 'vancouver',
+    city: 'Vancouver, BC',
+    name: 'Fulfilment Centre — West Hub',
+    budget: '$22.1M CAD',
+    completion: '58%',
+    team: '85 resources',
+    baseRisk: 'low',
+    defaults: { budget: 62, delay: 0, resource: 85, vendor: 2, change: 1 }
+  },
+  {
+    id: 'calgary',
+    city: 'Calgary, AB',
+    name: 'Fulfilment Centre — Prairie Hub',
+    budget: '$14.7M CAD',
+    completion: '19%',
+    team: '41 resources',
+    baseRisk: 'high',
+    defaults: { budget: 88, delay: 38, resource: 51, vendor: 7, change: 11 }
+  }
+];
+
+let selectedProject = projects[1]; // Vancouver default
+
+function renderProjects() {
+  const row = document.getElementById('projectsRow');
+  row.innerHTML = projects.map(p => `
+    <div class="project-card ${p.id === selectedProject.id ? 'selected' : ''}" onclick="selectProject('${p.id}')">
+      <div class="project-city">${p.city}</div>
+      <div class="project-name">${p.name}</div>
+      <div class="project-stats">
+        <div class="stat-line"><span>Budget</span><span>${p.budget}</span></div>
+        <div class="stat-line"><span>Completion</span><span>${p.completion}</span></div>
+        <div class="stat-line"><span>Team Size</span><span>${p.team}</span></div>
+      </div>
+      <span class="risk-pill risk-${p.baseRisk}">${p.baseRisk === 'low' ? '● Low Risk' : p.baseRisk === 'med' ? '● Med Risk' : '● High Risk'}</span>
+    </div>
+  `).join('');
+}
+
+function selectProject(id) {
+  selectedProject = projects.find(p => p.id === id);
+  renderProjects();
+  // Load defaults
+  const d = selectedProject.defaults;
+  document.getElementById('budget').value = d.budget;
+  document.getElementById('delay').value = d.delay;
+  document.getElementById('resource').value = d.resource;
+  document.getElementById('vendor').value = d.vendor;
+  document.getElementById('change').value = d.change;
+  updateSlider('budget','budgetVal','%',0,80,100);
+  updateSlider('delay','delayVal','d',0,14,30);
+  updateSlider('resource','resourceVal','%',70,50,30,true);
+  updateSlider('vendor','vendorVal','/10',4,6,8);
+  updateSlider('change','changeVal','',3,7,12);
+  // Clear results
+  document.getElementById('resultsContent').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+}
+
+function updateSlider(id, labelId, suffix, t1, t2, t3, invert=false) {
+  const val = parseFloat(document.getElementById(id).value);
+  const label = document.getElementById(labelId);
+  label.textContent = val + suffix;
+  let cls;
+  if (!invert) {
+    cls = val <= t1 ? 'val-green' : val <= t2 ? 'val-amber' : 'val-red';
+  } else {
+    cls = val >= t1 ? 'val-green' : val >= t2 ? 'val-amber' : 'val-red';
+  }
+  label.className = cls;
+}
+
+async function runAnalysis() {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    
+    document.getElementById('placeholder').style.display = 'none';
+    const rc = document.getElementById('resultsContent');
+    rc.style.display = 'block';
+    rc.innerHTML = `<div class="loading-wrap"><div class="loader"></div><div class="loading-text">OPUS 4.6 IS CALCULATING RISK...</div></div>`;
+
+    const params = {
+        budget: document.getElementById('budget').value,
+        delay: document.getElementById('delay').value,
+        resource: document.getElementById('resource').value,
+        vendor: document.getElementById('vendor').value,
+        change: document.getElementById('change').value,
+        regulatory: document.getElementById('regulatory').value,
+        extra: document.getElementById('extraContext').value
+    };
+
+    const prompt = `Analyze this Shopify project: ${selectedProject.name}. 
+    Stats: Budget ${params.budget}%, Delay ${params.delay}d, Resources ${params.resource}%, Vendor Risk ${params.vendor}/10. 
+    Context: ${params.extra}.
+    Return ONLY JSON: {"healthScore": 0-100, "riskLevel": "HIGH|MED|LOW", "riskLabel": "Title", "flags": [{"severity":"HIGH","description":"..."}], "recommendations": [], "confidence": 0-100}`;
+
+    try {
+        if (!puter.auth.isSignedIn()) {
+            rc.innerHTML = `<div class="placeholder"><button class="run-btn" onclick="puter.auth.signIn().then(()=>runAnalysis())">Sign In to Puter</button></div>`;
+            btn.disabled = false;
+            return;
+        }
+
+        // Using the exact 2026 flagship ID
+        const response = await puter.ai.chat(prompt, { 
+            model: 'anthropic/claude-opus-4-6' 
+        });
+        
+        // OPUS 4.6 FIX: Extract text from the new message structure
+        let rawText = "";
+        if (response.message && response.message.content) {
+            // Check if content is an array (Opus 4.6 multi-part format)
+            if (Array.isArray(response.message.content)) {
+                const textBlock = response.message.content.find(block => block.type === 'text');
+                rawText = textBlock ? textBlock.text : "";
+            } else {
+                rawText = response.message.content;
+            }
+        }
+
+        // Standard JSON Extraction
+        const start = rawText.indexOf('{');
+        const end = rawText.lastIndexOf('}') + 1;
+        const jsonStr = rawText.substring(start, end);
+
+        if (jsonStr) {
+            const result = JSON.parse(jsonStr);
+            
+            // Map the data to your UI
+            const cleanResult = {
+                healthScore: result.healthScore ?? 75, 
+                riskLevel: (result.riskLevel || "MED").toUpperCase(),
+                riskLabel: result.riskLabel || "Opus 4.6 Risk Assessment",
+                flags: result.flags || [],
+                recommendations: result.recommendations || [],
+                confidence: result.confidence || 95
+            };
+            
+            renderResults(cleanResult);
+        } else {
+            throw new Error("Opus 4.6 output did not contain a valid JSON block.");
+        }
+
+    } catch (e) {
+        console.error("Opus Error:", e);
+        rc.innerHTML = `<div class="placeholder" style="color:var(--red)">Analysis Error: ${e.message}</div>`;
+    }
+
+    btn.disabled = false;
+}
+
+// Optional: Automatic fallback to the faster Sonnet 4.6
+async function runFallbackAnalysis() {
+    // Similar to above but use model: 'anthropic/claude-sonnet-4-6'
+}
+
+function renderResults(r) {
+  const colorMap = { LOW: 'var(--green)', MODERATE: 'var(--amber)', HIGH: 'var(--red)', CRITICAL: 'var(--red)' };
+  const sevColor = { HIGH: 'var(--red)', MED: 'var(--amber)', LOW: 'var(--green)' };
+  const color = colorMap[r.riskLevel] || 'var(--green)';
+
+  const flagsHtml = (r.flags || []).map(f => `
+    <div class="flag-item">
+      <div class="flag-dot" style="background:${sevColor[f.severity]||'var(--muted)'}"></div>
+      <span>${f.description}</span>
+    </div>
+  `).join('');
+
+  const recsHtml = (r.recommendations || []).map((rec, i) => `
+    <div class="rec-item">
+      <span class="rec-num">0${i+1}</span>
+      <span>${rec}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('resultsContent').innerHTML = `
+    <div class="health-row">
+      <div class="score-circle" style="border-color:${color}; box-shadow: 0 0 20px ${color}33;">
+        <span class="score-number" style="color:${color}">${r.healthScore}</span>
+        <span class="score-label">Health</span>
+      </div>
+      <div class="score-details">
+        <div class="score-title" style="color:${color}">${r.riskLabel}</div>
+        <div class="score-sub">Risk Level: <strong style="color:${color}">${r.riskLevel}</strong> &nbsp;·&nbsp; Model Confidence: ${r.confidence}%</div>
+        <div class="score-sub" style="margin-top:4px">${selectedProject.name}</div>
+      </div>
+    </div>
+    <div class="flags-title">Risk Flags Detected</div>
+    ${flagsHtml}
+    <div class="divider"></div>
+    <div class="recs-title">AI Recommendations</div>
+    ${recsHtml}
+  `;
+}
+
+// Init
+renderProjects();
+updateSlider('budget','budgetVal','%',0,80,100);
+updateSlider('delay','delayVal','d',0,14,30);
+updateSlider('resource','resourceVal','%',70,50,30,true);
+updateSlider('vendor','vendorVal','/10',4,6,8);
+updateSlider('change','changeVal','',3,7,12);
+</script>
+</body>
+</html>
