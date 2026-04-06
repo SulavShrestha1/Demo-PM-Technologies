@@ -632,27 +632,64 @@ async function runAnalysis() {
     Return ONLY JSON: {"healthScore": 0-100, "riskLevel": "HIGH|MED|LOW", "riskLabel": "Title", "flags": [{"severity":"HIGH","description":"..."}], "recommendations": [], "confidence": 0-100}`;
 
     try {
-        // UNCOMMENT THIS FOR CLASSMATES TO USE THEIR OWN CREDITS
-        // if (!puter.auth.isSignedIn()) {
-        //     rc.innerHTML = `<div class="placeholder"><button class="run-btn" onclick="puter.auth.signIn().then(()=>runAnalysis())">Sign In to Puter</button></div>`;
-        //     btn.disabled = false;
-        //     return;
-        // }
 
-        let response;
+    if (!(await puter.auth.isSignedIn())) {
+
+        rc.innerHTML = `
+
+            <div class="placeholder">
+
+                <p style="margin-bottom:10px">Sign in required to access AI models.</p>
+
+                <button class="run-btn" onclick="puter.auth.signIn().then(()=>runAnalysis())">Sign In to Puter</button>
+
+            </div>`;
+
+        btn.disabled = false;
+
+        return;
+
+    }
+
+    let response;    
+
+    try {
+
+             console.log("Attempting Analysis with Claude Opus 4.6...");
+
+             response = await puter.ai.chat(prompt, { model: 'anthropic/claude-opus-4-6' });
+
+    } catch (err) {
+
         try {
 
-          
-            // console.log("Attempting Analysis with Claude Opus 4.6...");
-            // response = await puter.ai.chat(prompt, { model: 'anthropic/claude-opus-4-6' });
+            console.warn("Falling back to Gemini 1.5 Flash...");
 
+            response = await puter.ai.chat(prompt, { model: 'google/gemini-1.5-flash' });
 
-            console.log("TESTING: Running Analysis with Gemini 2.0 Flash...");
-            response = await puter.ai.chat(prompt, { model: 'google/gemini-2.0-flash' });
-        } catch (err) {
-            console.warn("Primary Model Failed. Switching to GPT-4o...");
-            response = await puter.ai.chat(prompt, { model: 'gpt-4o' });
+        } catch (err2) {
+
+            try {
+
+                console.warn("Gemini failed. Final fallback to GPT-4o...");
+
+                response = await puter.ai.chat(prompt, { model: 'gpt-4o' });
+
+            } catch (err3) {
+
+                console.error("All AI models failed.");
+
+                rc.innerHTML = `<div class="placeholder" style="color:var(--red)">AIl Services Unavailable.</div>`;
+
+                btn.disabled = false;
+
+                return;
+
+            }
+
         }
+
+    }
         
         // BETTER EXTRACTION: Handles both Claude (Array) and Gemini/GPT (String)
         let rawText = "";
