@@ -614,7 +614,7 @@ async function runAnalysis() {
     document.getElementById('placeholder').style.display = 'none';
     const rc = document.getElementById('resultsContent');
     rc.style.display = 'block';
-    rc.innerHTML = `<div class="loading-wrap"><div class="loader"></div><div class="loading-text">OPUS 4.6 IS CALCULATING RISK...</div></div>`;
+    rc.innerHTML = `<div class="loading-wrap"><div class="loader"></div><div class="loading-text">AI IS CALCULATING RISK...</div></div>`;
 
     const params = {
         budget: document.getElementById('budget').value,
@@ -632,58 +632,111 @@ async function runAnalysis() {
     Return ONLY JSON: {"healthScore": 0-100, "riskLevel": "HIGH|MED|LOW", "riskLabel": "Title", "flags": [{"severity":"HIGH","description":"..."}], "recommendations": [], "confidence": 0-100}`;
 
     try {
-        if (!puter.auth.isSignedIn()) {
-            rc.innerHTML = `<div class="placeholder"><button class="run-btn" onclick="puter.auth.signIn().then(()=>runAnalysis())">Sign In to Puter</button></div>`;
-            btn.disabled = false;
-            return;
-        }
+        // UNCOMMENT THIS FOR CLASSMATES TO USE THEIR OWN CREDITS
+        // if (!puter.auth.isSignedIn()) {
+        //     rc.innerHTML = `<div class="placeholder"><button class="run-btn" onclick="puter.auth.signIn().then(()=>runAnalysis())">Sign In to Puter</button></div>`;
+        //     btn.disabled = false;
+        //     return;
+        // }
 
-        // Using the exact 2026 flagship ID
-        const response = await puter.ai.chat(prompt, { 
-            model: 'anthropic/claude-opus-4-6' 
-        });
+        let response;
+        try {
+
+          
+            // console.log("Attempting Analysis with Claude Opus 4.6...");
+            // response = await puter.ai.chat(prompt, { model: 'anthropic/claude-opus-4-6' });
+
+
+            console.log("TESTING: Running Analysis with Gemini 2.0 Flash...");
+            response = await puter.ai.chat(prompt, { model: 'google/gemini-2.0-flash' });
+        } catch (err) {
+            console.warn("Primary Model Failed. Switching to GPT-4o...");
+            response = await puter.ai.chat(prompt, { model: 'gpt-4o' });
+        }
         
-        // OPUS 4.6 FIX: Extract text from the new message structure
+        // BETTER EXTRACTION: Handles both Claude (Array) and Gemini/GPT (String)
         let rawText = "";
-        if (response.message && response.message.content) {
-            // Check if content is an array (Opus 4.6 multi-part format)
-            if (Array.isArray(response.message.content)) {
-                const textBlock = response.message.content.find(block => block.type === 'text');
-                rawText = textBlock ? textBlock.text : "";
-            } else {
-                rawText = response.message.content;
-            }
+        const content = response.message.content;
+        if (Array.isArray(content)) {
+            const textBlock = content.find(block => block.type === 'text');
+            rawText = textBlock ? textBlock.text : "";
+        } else {
+            rawText = content;
         }
 
-        // Standard JSON Extraction
+        // REMOVE MARKDOWN: Cleans up ```json ... ``` tags if the AI adds them
+        rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
         const start = rawText.indexOf('{');
         const end = rawText.lastIndexOf('}') + 1;
         const jsonStr = rawText.substring(start, end);
 
         if (jsonStr) {
             const result = JSON.parse(jsonStr);
-            
-            // Map the data to your UI
             const cleanResult = {
-                healthScore: result.healthScore ?? 75, 
+                healthScore: result.healthScore ?? 70, 
                 riskLevel: (result.riskLevel || "MED").toUpperCase(),
-                riskLabel: result.riskLabel || "Opus 4.6 Risk Assessment",
+                riskLabel: result.riskLabel || "AI Risk Assessment Complete",
                 flags: result.flags || [],
                 recommendations: result.recommendations || [],
-                confidence: result.confidence || 95
+                confidence: result.confidence || 85
             };
-            
             renderResults(cleanResult);
         } else {
-            throw new Error("Opus 4.6 output did not contain a valid JSON block.");
+            throw new Error("Invalid AI format");
         }
 
     } catch (e) {
-        console.error("Opus Error:", e);
-        rc.innerHTML = `<div class="placeholder" style="color:var(--red)">Analysis Error: ${e.message}</div>`;
+        console.error("Analysis Error:", e);
+        rc.innerHTML = `<div class="placeholder" style="color:var(--red)">Analysis Error. Please try again.</div>`;
     }
-
     btn.disabled = false;
+}
+
+function renderResults(r) {
+    // UPDATED COLOR MAP: Matches the prompt values (LOW, MED, HIGH)
+    const colorMap = { 
+        LOW: 'var(--green)', 
+        MED: 'var(--amber)', 
+        MODERATE: 'var(--amber)', 
+        HIGH: 'var(--red)', 
+        CRITICAL: 'var(--red)' 
+    };
+    const sevColor = { HIGH: 'var(--red)', MED: 'var(--amber)', LOW: 'var(--green)' };
+    const color = colorMap[r.riskLevel] || 'var(--green)';
+
+    const flagsHtml = (r.flags || []).map(f => `
+        <div class="flag-item" style="border-left-color:${sevColor[f.severity] || 'var(--border)'}">
+            <div class="flag-dot" style="background:${sevColor[f.severity] || 'var(--muted)'}"></div>
+            <span>${f.description}</span>
+        </div>
+    `).join('');
+
+    const recsHtml = (r.recommendations || []).map((rec, i) => `
+        <div class="rec-item">
+            <span class="rec-num">0${i+1}</span>
+            <span>${rec}</span>
+        </div>
+    `).join('');
+
+    document.getElementById('resultsContent').innerHTML = `
+        <div class="health-row">
+            <div class="score-circle" style="border-color:${color}; box-shadow: 0 0 20px ${color}33;">
+                <span class="score-number" style="color:${color}">${r.healthScore}</span>
+                <span class="score-label">Health</span>
+            </div>
+            <div class="score-details">
+                <div class="score-title" style="color:${color}">${r.riskLabel}</div>
+                <div class="score-sub">Risk Level: <strong style="color:${color}">${r.riskLevel}</strong> &nbsp;·&nbsp; Confidence: ${r.confidence}%</div>
+                <div class="score-sub" style="margin-top:4px">${selectedProject.name}</div>
+            </div>
+        </div>
+        <div class="flags-title">Risk Flags Detected</div>
+        ${flagsHtml}
+        <div class="divider"></div>
+        <div class="recs-title">AI Recommendations</div>
+        ${recsHtml}
+    `;
 }
 
 // Optional: Automatic fallback to the faster Sonnet 4.6
